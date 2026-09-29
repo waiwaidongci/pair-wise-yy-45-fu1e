@@ -28,13 +28,17 @@ import AddLocationAltOutlinedIcon from '@mui/icons-material/AddLocationAltOutlin
 import PhotoCameraBackOutlinedIcon from '@mui/icons-material/PhotoCameraBackOutlined'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { decideProposal, saveDraft, setRounds, toggleAnnotation } from '../features/developmentSlice'
+import { SourceChip } from '../components/SourceChip'
 
 const rounds = ['第一轮', '第二轮', '第三轮'] as const
 
 export default function SampleReviewPage() {
   const dispatch = useAppDispatch()
   const state = useAppSelector((root) => root.development)
+  const pendingRevisions = useAppSelector((root) => root.offlineBatch.pendingRevisions)
   const sample = state.samples.find((item) => item.id === state.selectedId) ?? state.samples[0]
+  const snapshot = state.snapshots[sample.id]
+  const revisionsForSample = pendingRevisions.filter((item) => item.sampleId === sample.id)
   const [annotationOpen, setAnnotationOpen] = useState(false)
   const [decisionDialog, setDecisionDialog] = useState<string | null>(null)
   const [decisionReason, setDecisionReason] = useState('')
@@ -78,7 +82,16 @@ export default function SampleReviewPage() {
         <Box>
           <Typography className="eyebrow">SAMPLE REVIEW / 样品评审</Typography>
           <Typography component="h1" fontWeight={800}>{sample.styleCode} · 轮次对比</Typography>
-          <Typography color="text.secondary">尺寸差异超过容差自动高亮；图片批注与修改方案绑定到具体轮次。</Typography>
+          <Stack direction="row" spacing={0.8} mt={0.6} alignItems="center" flexWrap="wrap">
+            <SourceChip source="official" />
+            {snapshot && (
+              <Chip size="small" label={`锁定快照 ${snapshot.lockedAt}`} variant="outlined" sx={{ height: 20, fontSize: 10 }} />
+            )}
+            {revisionsForSample.length > 0 && (
+              <Chip size="small" label={`${revisionsForSample.length} 项待审修订`} color="secondary" sx={{ height: 20, fontSize: 10 }} />
+            )}
+          </Stack>
+          <Typography color="text.secondary" mt={0.6}>尺寸差异超过容差自动高亮；图片批注与修改方案绑定到具体轮次。</Typography>
         </Box>
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" startIcon={<PhotoCameraBackOutlinedIcon />}>上传样衣照片</Button>
@@ -86,7 +99,12 @@ export default function SampleReviewPage() {
         </Stack>
       </Box>
 
-      {state.locked && <Alert severity="success" sx={{ mb: 1.5 }}>该轮次已审核锁定。解锁后才能新增批注或采纳方案。</Alert>}
+      {state.locked && <Alert severity="success" sx={{ mb: 1.5 }}>该轮次已审核锁定，锁定快照不可覆盖。离线修订请走离线批次合并，仅进入待审修订。</Alert>}
+      {!state.locked && revisionsForSample.length > 0 && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          有 {revisionsForSample.length} 项离线批次合并产出的待审修订等待确认，原记录未被修改。
+        </Alert>
+      )}
       {sample.annotations.some((item) => item.status === '待处理') && (
         <Alert severity="warning" sx={{ mb: 1.5 }}>
           当前仍有 {sample.annotations.filter((item) => item.status === '待处理').length} 项待处理批注，审核锁定前必须逐项关闭。

@@ -20,16 +20,22 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import CompareArrowsOutlinedIcon from '@mui/icons-material/CompareArrowsOutlined'
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
 import CloudDoneOutlinedIcon from '@mui/icons-material/CloudDoneOutlined'
+import CloudSyncIcon from '@mui/icons-material/CloudSync'
+import { useAppSelector } from '../app/hooks'
 
 const nav = [
   { to: '/', label: '开发总览', icon: <DashboardOutlinedIcon /> },
   { to: '/styles', label: '款式档案', icon: <Inventory2OutlinedIcon /> },
   { to: '/review', label: '样品评审', icon: <CompareArrowsOutlinedIcon /> },
   { to: '/history', label: '修订历史', icon: <HistoryOutlinedIcon /> },
+  { to: '/offline', label: '离线批次', icon: <CloudSyncIcon />, badge: true },
 ]
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { batches, pendingRevisions } = useAppSelector((state) => state.offlineBatch)
+  const attentionCount = batches.filter((b) => b.status === '合并失败' || b.status === '待确认').length
+    + pendingRevisions.filter((r) => r.status === '待审').length
   const drawer = (
     <Box sx={{ width: 242, minHeight: '100%', bgcolor: '#262a2b', color: '#eef1ef' }}>
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.2, borderBottom: '1px solid rgba(255,255,255,.1)' }}>
@@ -58,6 +64,9 @@ export default function Layout() {
           >
             <Box sx={{ mr: 1.2, display: 'flex' }}>{item.icon}</Box>
             <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 13, fontWeight: 650 }} />
+            {item.badge && attentionCount > 0 && (
+              <Chip size="small" label={attentionCount} color="warning" sx={{ height: 20, fontSize: 11, fontWeight: 800 }} />
+            )}
           </ListItemButton>
         ))}
       </List>

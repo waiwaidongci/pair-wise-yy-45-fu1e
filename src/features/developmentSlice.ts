@@ -4,6 +4,12 @@ import type { Sample } from '../api/types'
 
 type Decision = { proposalId: string; decision: '已采纳' | '未采纳'; reason: string; decidedAt: string }
 
+/** 锁定快照：审核锁定时固化的版本，作为离线合并的基准，不可覆盖 */
+export type SampleSnapshot = {
+  sample: Sample
+  lockedAt: string
+}
+
 type DevelopmentState = {
   samples: Sample[]
   selectedId: string
@@ -13,6 +19,8 @@ type DevelopmentState = {
   draftNotes: Record<string, string>
   locked: boolean
   activeAnnotation: string | null
+  /** 各样品的锁定快照，key 为 sampleId */
+  snapshots: Record<string, SampleSnapshot>
 }
 
 const storageKey = 'garment-sampling-draft-v1'
@@ -29,6 +37,12 @@ const initialState: DevelopmentState = saved
       draftNotes: {},
       locked: false,
       activeAnnotation: null,
+      snapshots: {
+        'SMP-26018': {
+          sample: structuredClone(seedSamples[0]),
+          lockedAt: '2026-09-28 10:00',
+        },
+      },
     }
 
 const slice = createSlice({
@@ -68,12 +82,22 @@ const slice = createSlice({
       sample.proposals.forEach((proposal) => {
         if (proposal.status === '待决定') proposal.status = '未采纳'
       })
+      // 固化锁定快照，作为离线合并基准，后续不可覆盖
+      state.snapshots[sample.id] = { sample: structuredClone(sample), lockedAt: new Date().toLocaleString('zh-CN') }
       state.locked = true
     },
     unlockReview(state) {
       const sample = state.samples.find((item) => item.id === state.selectedId)
       if (sample) sample.status = '待审核'
       state.locked = false
+    },
+    /** 为尚未锁定的样品手动创建快照（离线合并基准） */
+    ensureSnapshot(state, action: PayloadAction<string>) {
+      const sample = state.samples.find((item) => item.id === action.payload)
+      if (!sample) return
+      if (!state.snapshots[sample.id]) {
+        state.snapshots[sample.id] = { sample: structuredClone(sample), lockedAt: new Date().toLocaleString('zh-CN') }
+      }
     },
   },
 })
@@ -87,5 +111,6 @@ export const {
   resolveAnnotation,
   lockReview,
   unlockReview,
+  ensureSnapshot,
 } = slice.actions
 export const developmentReducer = slice.reducer

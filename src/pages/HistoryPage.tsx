@@ -17,22 +17,26 @@ import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined'
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { lockReview, unlockReview } from '../features/developmentSlice'
+import { SourceChip } from '../components/SourceChip'
 
 export default function HistoryPage() {
   const dispatch = useAppDispatch()
   const state = useAppSelector((root) => root.development)
+  const pendingRevisions = useAppSelector((root) => root.offlineBatch.pendingRevisions)
   const sample = state.samples.find((item) => item.id === state.selectedId) ?? state.samples[0]
+  const revisionsForSample = pendingRevisions.filter((item) => item.sampleId === sample.id)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const pendingAnnotations = sample.annotations.filter((item) => item.status === '待处理').length
   const pendingProposals = sample.proposals.filter((item) => item.status === '待决定').length
   const canLock = pendingAnnotations === 0 && pendingProposals === 0
 
   const events = [
-    ...sample.annotations.map((item) => ({ date: '2026-09-27', title: `${item.part}批注`, owner: item.author, detail: item.content, status: item.status })),
-    ...sample.proposals.map((item) => ({ date: '2026-09-27', title: `${item.affectedPart}改版方案`, owner: item.author, detail: item.content, status: item.status })),
-    ...state.decisions.map((item) => ({ date: '今天', title: `方案 ${item.proposalId} ${item.decision}`, owner: '品类负责人', detail: item.reason, status: '已记录' })),
-    { date: '2026-09-26', title: '第三轮尺寸实测导入', owner: '苏州明裁制衣', detail: '导入 6 个部位实测值，系统发现 2 项超过容差。', status: '已同步' },
-    { date: '2026-09-22', title: '第二轮试穿评审', owner: '陈曼', detail: '完成动态试穿记录，肩袖活动量改善。', status: '已归档' },
+    ...sample.annotations.map((item) => ({ date: '2026-09-27', title: `${item.part}批注`, owner: item.author, detail: item.content, status: item.status, source: 'official' as const })),
+    ...sample.proposals.map((item) => ({ date: '2026-09-27', title: `${item.affectedPart}改版方案`, owner: item.author, detail: item.content, status: item.status, source: 'official' as const })),
+    ...state.decisions.map((item) => ({ date: '今天', title: `方案 ${item.proposalId} ${item.decision}`, owner: '品类负责人', detail: item.reason, status: '已记录', source: 'official' as const })),
+    ...revisionsForSample.map((item) => ({ date: item.createdAt, title: `${item.partName}修订（待审）`, owner: item.source === 'offline-batch' ? '离线批次' : '正式版本', detail: item.summary, status: item.status, source: item.source })),
+    { date: '2026-09-26', title: '第三轮尺寸实测导入', owner: '苏州明裁制衣', detail: '导入 6 个部位实测值，系统发现 2 项超过容差。', status: '已同步', source: 'official' as const },
+    { date: '2026-09-22', title: '第二轮试穿评审', owner: '陈曼', detail: '完成动态试穿记录，肩袖活动量改善。', status: '已归档', source: 'official' as const },
   ]
 
   return (
@@ -75,6 +79,7 @@ export default function HistoryPage() {
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                     <Typography fontWeight={800} fontSize={13}>{event.title}</Typography>
                     <Chip size="small" label={event.status} />
+                    <SourceChip source={event.source} />
                   </Stack>
                   <Typography color="text.secondary" fontSize={12} mt={0.5}>{event.detail}</Typography>
                   <Typography color="#8a918d" fontSize={10} mt={0.5}>操作者：{event.owner}</Typography>

@@ -1,13 +1,18 @@
 import { Box, Button, Chip, Divider, MenuItem, Stack, TextField, Typography } from '@mui/material'
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import LockOutlineIcon from '@mui/icons-material/LockOutline'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { selectSample } from '../features/developmentSlice'
+import { SourceChip } from '../components/SourceChip'
 
 export default function StylesPage() {
   const dispatch = useAppDispatch()
-  const { samples, selectedId } = useAppSelector((state) => state.development)
+  const { samples, selectedId, snapshots } = useAppSelector((state) => state.development)
+  const pendingRevisions = useAppSelector((state) => state.offlineBatch.pendingRevisions)
   const selected = samples.find((item) => item.id === selectedId) ?? samples[0]
+  const snapshot = snapshots[selected.id]
+  const revisionsForSample = pendingRevisions.filter((item) => item.sampleId === selected.id)
 
   return (
     <Box className="page">
@@ -59,6 +64,12 @@ export default function StylesPage() {
             <Box>
               <Typography color="text.secondary" fontSize={11}>{selected.id} · {selected.developmentSeason}</Typography>
               <Typography fontSize={22} fontWeight={850} mt={0.5}>{selected.styleName}</Typography>
+              <Stack direction="row" spacing={0.8} mt={0.8} alignItems="center" flexWrap="wrap">
+                <SourceChip source="official" />
+                {snapshot && (
+                  <Chip size="small" icon={<LockOutlineIcon />} label={`锁定快照 ${snapshot.lockedAt}`} variant="outlined" sx={{ height: 20, fontSize: 10 }} />
+                )}
+              </Stack>
             </Box>
             <Stack direction="row" spacing={1} alignItems="center">
               <Chip label={selected.category} />
@@ -108,6 +119,28 @@ export default function StylesPage() {
               ))}
             </Stack>
           </Box>
+
+          {revisionsForSample.length > 0 && (
+            <>
+              <Divider />
+              <Box sx={{ p: 2 }}>
+                <Typography fontWeight={800} mb={1.2}>待审修订（离线批次合并产出，不改原记录）</Typography>
+                <Stack spacing={1}>
+                  {revisionsForSample.map((rev) => (
+                    <Box key={rev.id} sx={{ p: 1.2, border: '1px solid #e2dfda', borderRadius: 1, bgcolor: '#faf8f5' }}>
+                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                        <Typography fontWeight={700} fontSize={13}>{rev.partName}</Typography>
+                        <Chip size="small" label={rev.kind === 'measurement' ? '尺寸实测' : rev.kind === 'annotation' ? '批注' : '替代方案'} sx={{ height: 18, fontSize: 10 }} />
+                        <SourceChip source={rev.source} />
+                        <Chip size="small" label={rev.status} color={rev.status === '已确认' ? 'success' : rev.status === '已驳回' ? 'default' : 'warning'} sx={{ height: 18, fontSize: 10 }} />
+                      </Stack>
+                      <Typography fontSize={12} mt={0.4} color="text.secondary">{rev.summary}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            </>
+          )}
         </Box>
       </Box>
     </Box>

@@ -4,6 +4,7 @@ import OverviewPage from './pages/OverviewPage'
 import StylesPage from './pages/StylesPage'
 import SampleReviewPage from './pages/SampleReviewPage'
 import HistoryPage from './pages/HistoryPage'
+import OfflineBatchesPage from './pages/OfflineBatchesPage'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/styles" element={<StylesPage />} />
         <Route path="/review" element={<SampleReviewPage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/offline" element={<OfflineBatchesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
