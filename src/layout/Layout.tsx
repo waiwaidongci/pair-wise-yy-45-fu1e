@@ -20,16 +20,22 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined'
 import CompareArrowsOutlinedIcon from '@mui/icons-material/CompareArrowsOutlined'
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
 import CloudDoneOutlinedIcon from '@mui/icons-material/CloudDoneOutlined'
+import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined'
+import SyncProblemOutlinedIcon from '@mui/icons-material/SyncProblemOutlined'
+import { useAppSelector } from '../app/hooks'
 
 const nav = [
   { to: '/', label: '开发总览', icon: <DashboardOutlinedIcon /> },
   { to: '/styles', label: '款式档案', icon: <Inventory2OutlinedIcon /> },
   { to: '/review', label: '样品评审', icon: <CompareArrowsOutlinedIcon /> },
+  { to: '/offline', label: '离线批次', icon: <SyncProblemOutlinedIcon /> },
   { to: '/history', label: '修订历史', icon: <HistoryOutlinedIcon /> },
 ]
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { online, batches } = useAppSelector((state) => state.offline)
+  const pendingBatches = batches.filter((item) => item.status === '待同步' || item.status === '合并失败' || item.status === '待确认').length
   const drawer = (
     <Box sx={{ width: 242, minHeight: '100%', bgcolor: '#262a2b', color: '#eef1ef' }}>
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.2, borderBottom: '1px solid rgba(255,255,255,.1)' }}>
@@ -63,10 +69,12 @@ export default function Layout() {
       </List>
       <Box sx={{ mx: 1.5, mt: 'auto', p: 1.5, border: '1px solid rgba(255,255,255,.1)', borderRadius: 1.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7 }}>
-          <CloudDoneOutlinedIcon sx={{ fontSize: 16, color: '#74b79d' }} />
-          <Typography fontSize={11}>草稿已实时保存</Typography>
+          {online ? <CloudDoneOutlinedIcon sx={{ fontSize: 16, color: '#74b79d' }} /> : <CloudOffOutlinedIcon sx={{ fontSize: 16, color: '#d8a15f' }} />}
+          <Typography fontSize={11}>{online ? '在线 · 已连接正式版本' : '离线 · 修改仅保存本机'}</Typography>
         </Box>
-        <Typography color="#8f9a98" fontSize={10} mt={0.8}>最后同步 16:42 · 3 位协作者</Typography>
+        <Typography color="#8f9a98" fontSize={10} mt={0.8}>
+          {pendingBatches > 0 ? `${pendingBatches} 个离线批次待处理` : '全部批次已同步'} · 3 位协作者
+        </Typography>
       </Box>
     </Box>
   )

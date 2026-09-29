@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { seedSamples } from '../api/seed'
-import type { Sample } from '../api/types'
+import type { Annotation, RevisionProposal, Sample } from '../api/types'
 
 type Decision = { proposalId: string; decision: '已采纳' | '未采纳'; reason: string; decidedAt: string }
 
@@ -75,6 +75,20 @@ const slice = createSlice({
       if (sample) sample.status = '待审核'
       state.locked = false
     },
+    applyMergedResult(
+      state,
+      action: PayloadAction<{ sampleId: string; measurements: Record<string, number>; annotations: Annotation[]; proposals: RevisionProposal[] }>,
+    ) {
+      const sample = state.samples.find((item) => item.id === action.payload.sampleId)
+      // 锁定快照不可覆盖：锁定版本的合并结果只能进入待审修订
+      if (!sample || sample.status === '已锁定') return
+      sample.measurements['第三轮'].forEach((item) => {
+        const next = action.payload.measurements[item.key]
+        if (typeof next === 'number') item.actual = next
+      })
+      sample.annotations = action.payload.annotations
+      sample.proposals = action.payload.proposals
+    },
   },
 })
 
@@ -87,5 +101,6 @@ export const {
   resolveAnnotation,
   lockReview,
   unlockReview,
+  applyMergedResult,
 } = slice.actions
 export const developmentReducer = slice.reducer

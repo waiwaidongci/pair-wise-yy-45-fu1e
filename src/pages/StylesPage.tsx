@@ -7,7 +7,9 @@ import { selectSample } from '../features/developmentSlice'
 export default function StylesPage() {
   const dispatch = useAppDispatch()
   const { samples, selectedId } = useAppSelector((state) => state.development)
+  const changeLog = useAppSelector((state) => state.offline.changeLog)
   const selected = samples.find((item) => item.id === selectedId) ?? samples[0]
+  const lastChange = changeLog.find((item) => item.sampleId === selected.id)
 
   return (
     <Box className="page">
@@ -74,6 +76,8 @@ export default function StylesPage() {
                 <Typography color="text.secondary">面辅料</Typography><Typography>{selected.fabric}</Typography>
                 <Typography color="text.secondary">色卡</Typography><Typography>{selected.colorway}</Typography>
                 <Typography color="text.secondary">计划交样</Typography><Typography>{selected.dueDate}</Typography>
+                <Typography color="text.secondary">最近来源</Typography>
+                <Typography>{lastChange ? `${lastChange.source} · ${lastChange.date}` : '正式版本'}</Typography>
               </Box>
             </Box>
             <Box>

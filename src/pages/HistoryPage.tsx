@@ -21,18 +21,23 @@ import { lockReview, unlockReview } from '../features/developmentSlice'
 export default function HistoryPage() {
   const dispatch = useAppDispatch()
   const state = useAppSelector((root) => root.development)
+  const offline = useAppSelector((root) => root.offline)
   const sample = state.samples.find((item) => item.id === state.selectedId) ?? state.samples[0]
   const [confirmOpen, setConfirmOpen] = useState(false)
   const pendingAnnotations = sample.annotations.filter((item) => item.status === '待处理').length
   const pendingProposals = sample.proposals.filter((item) => item.status === '待决定').length
   const canLock = pendingAnnotations === 0 && pendingProposals === 0
+  const samplePending = offline.pendingRevisions.filter((item) => item.sampleId === sample.id)
+  const sampleLogs = offline.changeLog.filter((item) => item.sampleId === sample.id)
 
   const events = [
-    ...sample.annotations.map((item) => ({ date: '2026-09-27', title: `${item.part}批注`, owner: item.author, detail: item.content, status: item.status })),
-    ...sample.proposals.map((item) => ({ date: '2026-09-27', title: `${item.affectedPart}改版方案`, owner: item.author, detail: item.content, status: item.status })),
-    ...state.decisions.map((item) => ({ date: '今天', title: `方案 ${item.proposalId} ${item.decision}`, owner: '品类负责人', detail: item.reason, status: '已记录' })),
-    { date: '2026-09-26', title: '第三轮尺寸实测导入', owner: '苏州明裁制衣', detail: '导入 6 个部位实测值，系统发现 2 项超过容差。', status: '已同步' },
-    { date: '2026-09-22', title: '第二轮试穿评审', owner: '陈曼', detail: '完成动态试穿记录，肩袖活动量改善。', status: '已归档' },
+    ...sample.annotations.map((item) => ({ date: '2026-09-27', title: `${item.part}批注`, owner: item.author, detail: item.content, status: item.status, source: item.origin ?? '正式版本' })),
+    ...sample.proposals.map((item) => ({ date: '2026-09-27', title: `${item.affectedPart}改版方案`, owner: item.author, detail: item.content, status: item.status, source: item.origin ?? '正式版本' })),
+    ...state.decisions.map((item) => ({ date: '今天', title: `方案 ${item.proposalId} ${item.decision}`, owner: '品类负责人', detail: item.reason, status: '已记录', source: '评审决定' })),
+    ...samplePending.map((item) => ({ date: item.createdAt, title: `待审修订 ${item.id}（离线合并）`, owner: item.source, detail: item.summary, status: item.status, source: '本机离线' })),
+    ...sampleLogs.map((item) => ({ date: item.date, title: '离线批次合并', owner: '离线同步', detail: item.summary, status: '已合并', source: item.source })),
+    { date: '2026-09-26', title: '第三轮尺寸实测导入', owner: '苏州明裁制衣', detail: '导入 6 个部位实测值，系统发现 2 项超过容差。', status: '已同步', source: '正式版本' },
+    { date: '2026-09-22', title: '第二轮试穿评审', owner: '陈曼', detail: '完成动态试穿记录，肩袖活动量改善。', status: '已归档', source: '正式版本' },
   ]
 
   return (
@@ -59,6 +64,11 @@ export default function HistoryPage() {
         </Alert>
       )}
       {state.locked && <Alert severity="success" sx={{ mb: 1.5 }}>当前轮次已锁定，只能查看历史。解锁后将新增一个修订分支。</Alert>}
+      {samplePending.length > 0 && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          {samplePending.length} 条离线合并修订正在待审：锁定版本的合并结果只进入待审修订，锁定快照与原记录未被改动。
+        </Alert>
+      )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0,1fr) 310px' }, gap: 1.5 }}>
         <Box className="panel" sx={{ p: 2 }}>
@@ -75,6 +85,12 @@ export default function HistoryPage() {
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                     <Typography fontWeight={800} fontSize={13}>{event.title}</Typography>
                     <Chip size="small" label={event.status} />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color={event.source === '本机离线' ? 'primary' : 'default'}
+                      label={`来源：${event.source}`}
+                    />
                   </Stack>
                   <Typography color="text.secondary" fontSize={12} mt={0.5}>{event.detail}</Typography>
                   <Typography color="#8a918d" fontSize={10} mt={0.5}>操作者：{event.owner}</Typography>

@@ -1,11 +1,15 @@
-import { Box, Button, Chip, LinearProgress, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Chip, LinearProgress, Stack, Typography } from '@mui/material'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { useNavigate } from 'react-router-dom'
 import { useAppSelector } from '../app/hooks'
 
 export default function OverviewPage() {
   const samples = useAppSelector((state) => state.development.samples)
+  const batches = useAppSelector((state) => state.offline.batches)
   const navigate = useNavigate()
+  const pendingSync = batches.filter((item) => item.status === '待同步').length
+  const failedSync = batches.filter((item) => item.status === '合并失败').length
+  const pendingConfirm = batches.filter((item) => item.status === '待确认').length
   const pendingProposals = samples.reduce((sum, item) => sum + item.proposals.filter((proposal) => proposal.status === '待决定').length, 0)
   const pendingAnnotations = samples.reduce((sum, item) => sum + item.annotations.filter((annotation) => annotation.status === '待处理').length, 0)
   const averagePass = Math.round(
@@ -28,6 +32,18 @@ export default function OverviewPage() {
         </Box>
         <Button variant="contained" onClick={() => navigate('/review')}>进入样衣评审</Button>
       </Box>
+
+      {pendingSync + failedSync + pendingConfirm > 0 && (
+        <Alert
+          severity={failedSync > 0 ? 'error' : 'warning'}
+          sx={{ mb: 2 }}
+          action={<Button size="small" onClick={() => navigate('/offline')}>前往处理</Button>}
+        >
+          离线修订：{pendingSync} 个批次待同步
+          {pendingConfirm > 0 ? `，${pendingConfirm} 个冲突待确认` : ''}
+          {failedSync > 0 ? `，${failedSync} 个合并失败可重试` : ''}。
+        </Alert>
+      )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', lg: 'repeat(4,1fr)' }, gap: 1.5, mb: 2 }}>
         {[
